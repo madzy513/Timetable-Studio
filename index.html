@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Timetable Studio</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg1:#fdf0f6;--bg2:#eaf3ff;--card:rgba(255,255,255,.78);--ink:#3b3a4a;--mute:#7b7a8e;--line:#e4dff0;--acc:#cbbcf8;--accd:#6f55d1;--cl:89%;--ct:#3b3a4a;--bad:#ffd9d9;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg1:#262036;--bg2:#1b2433;--card:rgba(45,42,61,.8);--ink:#ece9f7;--mute:#aaa6c1;--line:#47435e;--acc:#5b4a9e;--accd:#cdbfff;--cl:30%;--ct:#f1eefb;--bad:#5a2f3a}}
+:root[data-theme="dark"]{--bg1:#262036;--bg2:#1b2433;--card:rgba(45,42,61,.8);--ink:#ece9f7;--mute:#aaa6c1;--line:#47435e;--acc:#5b4a9e;--accd:#cdbfff;--cl:30%;--ct:#f1eefb;--bad:#5a2f3a}
+html{background:var(--bg1)}
+body{margin:0;min-height:100vh;font-family:Nunito,system-ui,sans-serif;color:var(--ink);background:linear-gradient(135deg,var(--bg1),var(--bg2)) fixed}
+main{max-width:1000px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:28px;font-weight:800;margin:6px 0 2px}
+h2{font-size:18px;margin:0 0 10px;font-weight:800}
+.sub{color:var(--mute);margin:0 0 16px}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.tab{border:0;border-radius:999px;padding:9px 18px;font:inherit;font-weight:600;background:var(--card);color:var(--ink);cursor:pointer}
+.tab.on{background:var(--acc);color:var(--ink);box-shadow:0 2px 10px rgba(120,100,200,.25)}
+.tab:disabled{opacity:.45;cursor:not-allowed}
+.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:16px;margin-bottom:14px;backdrop-filter:blur(6px)}
+.row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
+input,select{font:inherit;color:var(--ink);background:var(--bg1);border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-width:0}
+input.w{flex:1;min-width:130px}input.n{width:70px}
+button.b{font:inherit;font-weight:600;border:0;border-radius:12px;padding:8px 14px;background:var(--acc);color:var(--ink);cursor:pointer}
+button.x{font:inherit;border:0;background:transparent;color:var(--mute);cursor:pointer;font-size:18px}
+button.go{font-size:17px;padding:13px 26px;border-radius:16px;background:var(--accd);color:#fff}
+:root:not([data-theme="light"]) button.go{color:#1c1830}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accd);outline-offset:2px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+.chip{display:inline-block;border-radius:999px;padding:4px 11px;margin:3px 4px 3px 0;font-size:13px;font-weight:600;background:hsl(var(--h,260) 70% var(--cl));color:var(--ct)}
+.chip.bad{background:var(--bad)}
+.msg{border-radius:14px;padding:10px 14px;margin:10px 0;background:var(--bad)}
+.wrap{overflow-x:auto}
+table{border-collapse:separate;border-spacing:6px;width:100%;min-width:620px}
+th{font-weight:800;padding:6px;color:var(--mute)}
+td.c{border-radius:14px;padding:8px 6px;text-align:center;font-size:14px;min-width:96px;height:46px;background:hsl(var(--h,0) 70% var(--cl));color:var(--ct)}
+td.c b{display:block;font-weight:800}td.c small{opacity:.8}
+td.c.free{--h:220;filter:saturate(.2)}
+td.c.none{background:transparent;border:2px dashed var(--line);color:var(--mute)}
+th.p{white-space:nowrap}
+</style></head><body><main>
+<h1>🌸 Timetable Studio</h1>
+<p class="sub">Set up subjects, classes and teachers, then generate clash-free timetables.</p>
+<div class="tabs" id="tabs"></div>
+<div id="app"></div>
+</main>
+<script>
+const DAYS=['Mon','Tue','Wed','Thu','Fri'],P=8,HUES=[340,205,150,45,265,20,180,300,95,230,60,0];
+let S={subs:[{n:'Math',p:6},{n:'English',p:6},{n:'Science',p:6},{n:'Social',p:5},{n:'Hindi',p:5},{n:'Computer',p:4},{n:'PE',p:4},{n:'Art',p:4}],nc:3,secs:[2,2,2],
+tch:[['Ms. Anita Rao','Math'],['Mr. Dev Nair','Math'],['Ms. Priya Iyer','English'],['Mr. Sam Thomas','English'],['Ms. Kavya Shah','Science'],['Mr. Arjun Mehta','Science'],['Ms. Leela Menon','Social'],['Mr. Ravi Kumar','Social'],['Ms. Farah Khan','Hindi'],['Mr. Omar Sheikh','Hindi'],['Ms. Tara Joseph','Computer'],['Mr. Neil D’Souza','PE'],['Ms. Isha Bose','Art']].map(a=>({n:a[0],s:a[1]})),
+tt:null,view:'setup',selS:0,selT:0};
+try{const d=JSON.parse(localStorage.getItem('tt-setup'));if(d&&d.subs&&d.tch)Object.assign(S,d)}catch(e){}
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const save=()=>{try{localStorage.setItem('tt-setup',JSON.stringify({subs:S.subs,nc:S.nc,secs:S.secs,tch:S.tch}))}catch(e){}};
+const sections=()=>{const r=[];for(let c=0;c<S.nc;c++)for(let k=0;k<S.secs[c];k++)r.push('Class '+(c+1)+'-'+String.fromCharCode(65+k));return r};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,parseInt(v)||a));
+const hue=i=>HUES[i%12];
+
+function nav(){
+  const ok=!!S.tt;
+  $('tabs').innerHTML=[['setup','Setup'],['class','Class timetables'],['teacher','Teacher timetables']].map(([k,l])=>
+   `<button class="tab ${S.view===k?'on':''}" ${k!=='setup'&&!ok?'disabled':''} onclick="S.view='${k}';render()">${l}</button>`).join('');
+}
+function render(){nav();({setup:setup,class:classView,teacher:teacherView})[S.view]()}
+
+function cap(){
+  const ns=sections().length;
+  return S.subs.filter(s=>s.n.trim()).map((s,i)=>{
+    const need=s.p*ns,t=S.tch.filter(x=>x.s===s.n).length,c=t*30;
+    return `<span class="chip ${need>c?'bad':''}" style="--h:${hue(i)}">${esc(s.n)}: ${need} periods, ${t} teacher${t==1?'':'s'} (room for ${c})</span>`}).join('');
+}
+function setup(){
+  const tot=S.subs.reduce((a,s)=>a+(+s.p||0),0),ns=sections().length;
+  $('app').innerHTML=`
+  <div class="grid2">
+  <div class="card"><h2>Subjects</h2><p class="sub">Periods per week for every section. A section has ${DAYS.length*P} periods a week; leftovers become free periods.</p>
+   ${S.subs.map((s,i)=>`<div class="row"><input class="w" value="${esc(s.n)}" placeholder="Subject" onchange="ren(${i},this.value)">
+   <input class="n" type="number" min="0" max="40" value="${s.p}" onchange="S.subs[${i}].p=clamp(this.value,0,40);save();setup()"><span class="sub" style="margin:0">/ week</span>
+   <button class="x" title="Remove" onclick="S.subs.splice(${i},1);save();setup()">✕</button></div>`).join('')}
+   <button class="b" onclick="S.subs.push({n:'',p:2});setup()">+ Add subject</button>
+   <p style="margin:12px 0 0;font-weight:600;color:${tot>40?'#d9534f':'inherit'}">Total: ${tot} of 40 periods per section${tot>40?' – too many, reduce a subject':''}</p></div>
+  <div class="card"><h2>Classes and sections</h2>
+   <div class="row"><label>Number of classes</label><input class="n" type="number" min="1" max="12" value="${S.nc}" onchange="setNc(this.value)"></div>
+   ${Array.from({length:S.nc},(_,c)=>`<div class="row"><span style="width:80px">Class ${c+1}</span><input class="n" type="number" min="1" max="10" value="${S.secs[c]}" onchange="S.secs[${c}]=clamp(this.value,1,10);save();setup()"><span class="sub" style="margin:0">sections</span></div>`).join('')}
+   <p class="sub" style="margin:8px 0 0">${ns} sections in total</p></div></div>
+  <div class="card"><h2>Teachers</h2>
+   ${S.tch.map((t,i)=>`<div class="row"><input class="w" value="${esc(t.n)}" placeholder="Teacher name" oninput="S.tch[${i}].n=this.value;save()">
+   <select onchange="S.tch[${i}].s=this.value;save();setup()">${S.subs.filter(s=>s.n.trim()).map(s=>`<option ${s.n===t.s?'selected':''}>${esc(s.n)}</option>`).join('')}</select>
+   <button class="x" title="Remove" onclick="S.tch.splice(${i},1);save();setup()">✕</button></div>`).join('')}
+   <button class="b" onclick="S.tch.push({n:'',s:(S.subs[0]||{}).n||''});setup()">+ Add teacher</button></div>
+  <div class="card"><h2>Teacher capacity check</h2><p class="sub">A teacher can take at most 6 periods a day, so 30 a week in practice (the 40 limit is never reached). Add teachers where a chip is red.</p>${cap()}
+   <div style="margin-top:14px"><button class="b go" onclick="gen()">✨ Generate timetables</button></div><div id="msg"></div></div>`;
+}
+function ren(i,v){const o=S.subs[i].n;S.tch.forEach(t=>{if(t.s===o)t.s=v});S.subs[i].n=v;save();setup()}
+function setNc(v){S.nc=clamp(v,1,12);while(S.secs.length<S.nc)S.secs.push(2);save();setup()}
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function gen(){
+  const secN=sections(),ns=secN.length,seen={};
+  const items=S.subs.filter(s=>s.n.trim()&&(+s.p>0)&&!seen[s.n.trim()]&&(seen[s.n.trim()]=1)).map(s=>({n:s.n.trim(),p:+s.p}));
+  const tot=items.reduce((a,s)=>a+s.p,0),m=$('msg');
+  if(!items.length){m.innerHTML='<div class="msg">Add at least one subject with periods.</div>';return}
+  if(tot>40){m.innerHTML='<div class="msg">Subjects add up to '+tot+' periods but a week has 40. Reduce some subjects.</div>';return}
+  if(tot<40)items.push({n:'Free',p:40-tot,free:1});
+  const T=S.tch.filter(t=>t.n.trim()&&t.s),byS={};
+  T.forEach((t,i)=>(byS[t.s]=byS[t.s]||[]).push(i));
+  const lack=items.filter(i=>!i.free&&!byS[i.n]).map(i=>i.n);
+  if(lack.length){m.innerHTML='<div class="msg">No teacher assigned for: '+lack.map(esc).join(', ')+'.</div>';return}
+  let best=null;
+  for(let a=0;a<400&&(!best||best.miss);a++){
+    const need=secN.map(()=>items.map(i=>i.p)),grid=secN.map(()=>DAYS.map(()=>Array(P).fill(null))),
+    busy=T.map(()=>DAYS.map(()=>Array(P).fill(-1))),td=T.map(()=>Array(5).fill(0)),tw=T.map(()=>0),
+    dc=secN.map(()=>DAYS.map(()=>items.map(()=>0)));
+    for(let d=0;d<5;d++)for(let p=0;p<P;p++)for(const s of shuffle([...Array(ns).keys()])){
+      const left=(4-d)*P+(P-p);let bc=null,bs=-1e9;
+      items.forEach((it,i)=>{
+        if(need[s][i]<=0)return;
+        const g=grid[s][d];
+        if(p>1&&g[p-1]&&g[p-2]&&g[p-1].i===i&&g[p-2].i===i)return;
+        let t=-1;
+        if(!it.free){let bl=1e9;for(const ti of byS[it.n]){
+          if(busy[ti][d][p]>=0||td[ti][d]>=6||tw[ti]>=40)continue;
+          let run=0;for(let q=p-1;q>=0&&busy[ti][d][q]>=0;q--)run++;
+          if(run>=4)continue;
+          const l=tw[ti]+Math.random();if(l<bl){bl=l;t=ti}}
+          if(t<0)return}
+        const sc=need[s][i]/left*12-dc[s][d][i]*2.2-(p>0&&g[p-1]&&g[p-1].i===i?1.2:0)+Math.random()*1.5;
+        if(sc>bs){bs=sc;bc={i,t}}});
+      if(bc){grid[s][d][p]=bc;need[s][bc.i]--;dc[s][d][bc.i]++;
+        if(bc.t>=0){busy[bc.t][d][p]=s;td[bc.t][d]++;tw[bc.t]++}}
+    }
+    const miss=need.flat().reduce((x,y)=>x+y,0);
+    if(!best||miss<best.miss)best={miss,grid,busy,secN,items,T};
+  }
+  S.tt=best;S.selS=0;S.selT=0;S.view='class';render();
+  if(best.miss)$('app').insertAdjacentHTML('afterbegin',`<div class="msg">Could not place ${best.miss} period${best.miss>1?'s':''} (dashed cells). Add teachers for the busiest subjects or lower some periods per week, then generate again.</div>`);
+}
+function table(cell,rowLbl){
+  return `<div class="wrap"><table><tr><th></th>${DAYS.map(d=>`<th>${d}</th>`).join('')}</tr>`+
+  Array.from({length:P},(_,p)=>`<tr><th class="p">Period ${p+1}</th>${DAYS.map((_,d)=>cell(d,p)).join('')}</tr>`).join('')+`</table></div>`;
+}
+function classView(){
+  const tt=S.tt,s=S.selS,g=tt.grid[s];
+  $('app').innerHTML=`<div class="card"><div class="row"><h2 style="margin:0">Class timetable</h2>
+   <select onchange="S.selS=+this.value;classView()">${tt.secN.map((n,i)=>`<option value="${i}" ${i==s?'selected':''}>${n}</option>`).join('')}</select></div>
+   <div>${tt.items.map((it,i)=>`<span class="chip" style="--h:${hue(i)}">${esc(it.n)} · ${it.p}</span>`).join('')}</div>
+   ${table((d,p)=>{const c=g[d][p];if(!c)return '<td class="c none">—</td>';const it=tt.items[c.i];
+     return `<td class="c ${it.free?'free':''}" style="--h:${hue(c.i)}"><b>${esc(it.n)}</b>${c.t>=0?`<small>${esc(tt.T[c.t].n)}</small>`:''}</td>`})}</div>`;
+  if(tt.miss&&!document.querySelector('.msg'))$('app').insertAdjacentHTML('afterbegin',`<div class="msg">${tt.miss} period${tt.miss>1?'s':''} could not be placed in the whole school (dashed cells). Add teachers or reduce periods, then generate again.</div>`);
+}
+function teacherView(){
+  const tt=S.tt,t=S.selT;
+  if(!tt.T.length){$('app').innerHTML='<div class="card">No teachers yet.</div>';return}
+  const load=ti=>tt.busy[ti].flat().filter(x=>x>=0).length;
+  const perDay=tt.busy[t].map(r=>r.filter(x=>x>=0).length);
+  $('app').innerHTML=`<div class="card"><div class="row"><h2 style="margin:0">Teacher timetable</h2>
+   <select onchange="S.selT=+this.value;teacherView()">${tt.T.map((x,i)=>`<option value="${i}" ${i==t?'selected':''}>${esc(x.n)} (${esc(x.s)})</option>`).join('')}</select></div>
+   <div><span class="chip">${load(t)} periods this week</span>${perDay.map((n,d)=>`<span class="chip">${DAYS[d]}: ${n}</span>`).join('')}</div>
+   ${table((d,p)=>{const s=tt.busy[t][d][p];if(s<0)return '<td class="c none">free</td>';const c=tt.grid[s][d][p];
+     return `<td class="c" style="--h:${hue(c.i)}"><b>${tt.secN[s]}</b><small>${esc(tt.items[c.i].n)}</small></td>`})}</div>`;
+}
+render();
+</script></body></html>
